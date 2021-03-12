@@ -1,0 +1,4 @@
+*.wav
+.gradle/
+.idea/
+build/

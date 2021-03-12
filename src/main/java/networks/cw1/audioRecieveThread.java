@@ -1,4 +1,4 @@
-/*
+package networks.cw1;/*
  * TextReceiver.java
  */
 
@@ -14,7 +14,6 @@ import uk.ac.uea.cmp.voip.DatagramSocket4;
 import javax.sound.sampled.LineUnavailableException;
 import java.net.*;
 import java.io.*;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;

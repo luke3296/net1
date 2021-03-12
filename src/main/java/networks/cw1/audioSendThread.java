@@ -1,4 +1,4 @@
-    /*
+package networks.cw1;    /*
      * TextSender.java
      */
 
@@ -12,11 +12,9 @@
     import uk.ac.uea.cmp.voip.DatagramSocket4;
 
     import javax.sound.sampled.LineUnavailableException;
-    import java.lang.reflect.Array;
     import java.net.*;
     import java.io.*;
     import java.nio.ByteBuffer;
-    import java.nio.IntBuffer;
     import java.util.ArrayList;
 
     public class audioSendThread implements Runnable{
