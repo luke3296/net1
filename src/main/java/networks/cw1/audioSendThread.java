@@ -1,167 +1,312 @@
-package networks.cw1;    /*
-     * TextSender.java
-     */
+package networks.cw1;    
+import CMPC3M06.AudioRecorder;
+//import uk.ac.uea.cmp.voip.DatagramSocket;
 
-/**
- *
- * @author  abj
- */
-    import CMPC3M06.AudioRecorder;
-    import uk.ac.uea.cmp.voip.DatagramSocket2;
-    import uk.ac.uea.cmp.voip.DatagramSocket3;
-    import uk.ac.uea.cmp.voip.DatagramSocket4;
-
-    import javax.sound.sampled.LineUnavailableException;
-    import java.net.*;
-    import java.io.*;
-    import java.nio.ByteBuffer;
-    import java.util.ArrayList;
-    import java.util.Random;
+import javax.sound.sampled.LineUnavailableException;
+import java.io.*;
+import java.net.*;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
 public class audioSendThread implements Runnable {
+    static ByteBuffer voipPacket;
+    static InetAddress clientIP;
+    static String ip = "localhost";
+    static DatagramSocket sending_socket; // for sending key and the audio packets
+    static DatagramSocket receiving_socket; //for listening for a key from receieve
+    static int RECIEVE_PORT = 55556; //The port to listen to packets on
+    static int SEND_PORT = 55557; //The port to send packets too
+    static int receivedKey =0; //the key to recieve from the Reciever thread
+    static int dhParam = 4;
+    static int modulus = 23;
+    static int base = 5;
+    static int dhSendKey = 0;// the key to send == (base ^ dhParam) mod modulus e.g 5^4mod23
+    static int dhSharedKey = 0; // calculate the key from the key recieved  form the Reciever
+    static short authKey = 38;
+    static AudioRecorder ar;
+    static ArrayList<byte[]> packets; //hold a list of packets for interleaving
+    static int interleaveCount = 0; // count the packets sent
+    static int interleaveCase = 0; // 0 = no interleaving,  1= 4x4 interleaving, 2 = 8x8
+//now redundent using tcp for key exhange
+    static boolean waitForKey = true;
+    static  boolean waitForConfirm = true;
+    static int confirmed = 0;
 
-        // from Prabhu R on SO here -> https://stackoverflow.com/questions/1086054/how-to-convert-int-to-byte/1086071#1086071
-        static byte[] integersToBytes(int[] values) throws IOException {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            DataOutputStream dos = new DataOutputStream(baos);
-            for(int i=0; i < values.length; ++i)
-            {
-                dos.writeInt(values[i]);
-            }
-            return baos.toByteArray();
+
+
+
+    @Override
+    public void run() {
+        System.out.println("send start");
+        dhSendKey = (int) (Math.pow(base , dhParam) % modulus);
+        packets = new ArrayList<>();
+        //initalize the clinetIP;
+        try {
+            clientIP = InetAddress.getByName(ip);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
         }
-
-
-        // static int key = 57; // if the key is 512 the audio is uneffected the audio is still understandble but there noticble noise
-        private DatagramSocket sending_socket;
-        private InetAddress clientIP = null;
-        static int PORT = 55555;
-        private AudioRecorder ar;
-        static short authKey = 38;
-        private  ByteBuffer voipPacket;
-        private ArrayList<byte[]> packets = new ArrayList<byte[]>();
-        public void start(){
-            Thread thread = new Thread(this);
-            thread.start();
+        //initlaize the sending socket, will send data from random ports
+        try {
+            sending_socket = new DatagramSocket();
+        } catch (SocketException e) {
+            e.printStackTrace();
         }
-
-        public void run (){
-            try {
-                ar = new AudioRecorder();
-            } catch (LineUnavailableException e) {
-                e.printStackTrace();
-            }
-            int interleaveCount=0;
-            while (true) {
-                try {
-                    sending_socket = new DatagramSocket4();
-                } catch (SocketException e) {
-                    System.out.println("ERROR: TextSender: Could not open UDP socket to send from.");
-                    e.printStackTrace();
-                    System.exit(0);
-                }
-                try {
-                    clientIP = InetAddress.getByName("localhost");
-                } catch (UnknownHostException e) {
-                    System.out.println("ERROR: TextSender: Could not find client IP");
-                    e.printStackTrace();
-                    System.exit(0);
-                }
-
-
-                byte[] data = new byte[512];
-                try {
-                    data = ar.getBlock();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                if(data == null){
-                    System.out.println("data was null");
-                }
-                try {
-                    // sendData(addHeader(encryptData(encryptData(encryptData(data, 1507), 5657), 389))); // this is with three rounds yet still understanble
-                    Packet packet = new Packet(authKey, encryptData(data, 1680480041));
-                    DatagramPacket packet1 = new DatagramPacket(new byte[1], 1, clientIP, PORT);
-                    packet.SendPacket(packet1);
-                    sending_socket.send(packet1);
-
+        //initlaize the recieveing socket, will listen on port provided
+        try {
+            receiving_socket = new DatagramSocket(RECIEVE_PORT);
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
+        //initlaize the audio recorder
+        try {
+            ar = new AudioRecorder();
+        } catch (LineUnavailableException e) {
+            e.printStackTrace();
+        }
+//Doing the dh key exchange over udp
+        //send key and listen for confirm, if confirm break
+//        while (waitForConfirm){
+//            try {
+//                sendIntKey(dhSendKey);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//            confirmed = recieveIntKey();
+//            if(confirmed == 1){
+//                waitForConfirm = false;
+//            }
+//        }
+//        //send the confirm key 2 times, bursts could mess this up
+//            try {
+//                sendIntKey(1);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
 //
-//                    if (interleaveCount == 16) {
-//                        sendPackets(interleavePackets4x4(packets));
-//                        //    System.out.println("sending " + packets.size() + " packets");
-//                        packets.clear();
-//                        interleaveCount = 0;
-//                    } else {
-//                        packets.add(addHeader(encryptData(encryptData(encryptData(data, 1507), 5657), 389)));
-//                        interleaveCount++;
-//                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
+//        //listen for key
+//        while (waitForKey){
+//            receivedKey=recieveIntKey();
+//            if(receivedKey > 0){
+//                waitForKey = false;
+//            }
+//        }
+
+        //Doing the dh key exchange over tcp
+        ServerSocket ss = null;
+        try {
+            ss = new ServerSocket(4999);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Socket s = null;
+        try {
+            s = ss.accept();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        InputStreamReader ins = null;
+        try {
+            ins = new InputStreamReader(s.getInputStream());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        BufferedReader br = new BufferedReader(ins);
+
+        String str = null;
+        try {
+            str = br.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        PrintWriter pw = null;
+        try {
+            pw = new PrintWriter(s.getOutputStream());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        pw.println(dhSendKey);
+        pw.flush();
+
+        receivedKey = Integer.valueOf(str);
+        //compute the shared key
+        dhSharedKey = (int) (Math.pow(receivedKey, dhParam)%modulus);
+        System.out.println("sender got to main loop with key: " + dhSharedKey);
+
+        //close the resources used for the tcp dh key swap
+        try {
+            s.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        pw.close();
+        try {
+            ins.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            br.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            ss.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        pw.close();
+
+
+        //main loop
+        switch (interleaveCase){
+            case 0:
+                while(true){
+                    byte[] data = new byte[512];
+                    //load 32ms of audio data
+                    try {
+                        data = ar.getBlock();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    try {
+                        sendData(addDHKeyToHeader(addAuthKeyToHeader(HelperClass.encryptData(HelperClass.encryptData(HelperClass.encryptData(data, 1507), 5657), 389))));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
-            }
+            case 1:
+                while (true){
+                    byte[] data = new byte[512];
+                    //load 32ms of audio data
+                    try {
+                        data = ar.getBlock();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    try {
+                        if (interleaveCount == 16) {
+                            sendPackets(HelperClass.interleavePackets4x4(packets));
+                            //    System.out.println("sending " + packets.size() + " packets");
+                            packets.clear();
+                            interleaveCount = 0;
+                        } else {
+                            packets.add(addDHKeyToHeader(addAuthKeyToHeader(HelperClass.encryptData(HelperClass.encryptData(HelperClass.encryptData(data, 1507), 5657), 389))));
+                            interleaveCount++;
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                case 2:
+                    while (true){
+                        byte[] data = new byte[512];
+                        //load 32ms of audio data
+                        try {
+                            data = ar.getBlock();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        try {
+                            if (interleaveCount == 64) {
+                                sendPackets(HelperClass.interleavePackets8x8(packets));
+                                packets.clear();
+                                interleaveCount = 0;
+                            } else {
+                                packets.add(addDHKeyToHeader(addAuthKeyToHeader(HelperClass.encryptData(HelperClass.encryptData(HelperClass.encryptData(data, 1507), 5657), 389))));
+                                interleaveCount++;
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
         }
 
-        /*
-         * interlaeve function
-         *
-         * (id +j) = jd+(d-1-i) 0<= i,j <= d-1  d=4
-         *     0   1   2   3  j*width+i width=4
-         * 0   1   2   3   4
-         * 1   5   6   7   8
-         * 2   9   10  11  12
-         * 3   13  14  15  16
-         *
-         * packet 4 position 3 i=3 j= 0 index = 0*4 +3 = 3
-         * packet 10 position 9 i =1 j=2  index = 2*4 +1 = 9
-         * */
-//        public static ArrayList<byte[]> interleavePackets4x4(ArrayList<byte[]> arrL){
-//            HelperClass.Matrix m = new HelperClass.Matrix(arrL,4,4);
-//           // m.printMatrix();
-//            return m.getList();
+//        while(true){
+//            int[] ints = {1,2,3,4};
+//            byte[] byts = null;
+//            try {
+//               byts  = HelperClass.integersToBytes(ints);
+//           //     System.out.println(byts.length);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//            byts = addAuthKeyToHeader(byts);
+//            byts = addDHKeyToHeader(byts);
+//         //   System.out.println("byts len+ " + byts.length);
+//            DatagramPacket pack = new DatagramPacket(byts,byts.length,clientIP, SEND_PORT);
+//            try {
+//                sending_socket.send(pack);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
 //        }
-//        public static ArrayList<byte[]> interleavePackets12x12(ArrayList<byte[]> arrL){
-//            HelperClass.Matrix m = new HelperClass.Matrix(arrL,12,12);
-//            return m.transpose().getPacketList();
-//        }
-
-        public void sendData(byte[] blk) throws IOException {
-            DatagramPacket packet = new DatagramPacket(blk,blk.length, clientIP, PORT);
-
-            //Send it
-            sending_socket.send(packet);
-        }
-        public byte[] getData() throws IOException {
-            return ar.getBlock();
-        }
-        public byte[] addHeader(byte[] data){
-            voipPacket = ByteBuffer.allocate(514);//2 bytes n=more than paylaod
-            voipPacket.putShort(authKey);
-            voipPacket.put(data);
-            return voipPacket.array();
-
-        }
-
-        public void closeResources(){
-            ar.close();
-            sending_socket.close();
-        }
-        public byte[] encryptData(byte[] arr, int key) throws IOException {
-            byte[] res = new byte[512];
-            int[] intRes = new int[128];
-            int fourByte =0;
-            ByteBuffer plainText = ByteBuffer.wrap(arr);
-            Random random = new Random(key);
-            byte[] xorBytes = new byte[512];
-            random.nextBytes(xorBytes);
-            ByteBuffer xorKey = ByteBuffer.wrap(xorBytes);
-            for (int j = 0; j < arr.length / 4; j++) {
-                fourByte = plainText.getInt();
-                fourByte = fourByte ^ xorKey.getInt();// XOR operation with keyunwrapEncrypt.putInt(fourByte); }
-                intRes[j] = fourByte;
-            }
-            return integersToBytes(intRes);
-        }
 
     }
+    public void start() {
+        Thread thread = new Thread(this);
+        thread.start();
+    }
 
+    //sends an int in the payload of the      now redundent using tcp
+    public static void sendIntKey(int keyToSend) throws IOException {
+        voipPacket =  ByteBuffer.allocate(4);
+        voipPacket.putInt(keyToSend);
+        byte[] firstSendKey;
+        firstSendKey =  voipPacket.array();
+        DatagramPacket pack = new DatagramPacket(firstSendKey,firstSendKey.length,clientIP,SEND_PORT);
+        sending_socket.send(pack);
+        voipPacket.clear();
+    }
+    //recieves a packet and returns            now redundent using tcp
+    public static int recieveIntKey(){
+            byte[] res = new byte[4];
+            DatagramPacket recievedPacket = new DatagramPacket(res,res.length);
+
+        try {
+            receiving_socket.receive(recievedPacket);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        ByteArrayInputStream byteIn = new ByteArrayInputStream(recievedPacket.getData());
+        DataInputStream dataIn = new DataInputStream(byteIn);
+        int tmp = 0;
+        try {
+            tmp = dataIn.readInt();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return tmp;
+    }
+    //add Header
+    public static byte[] addAuthKeyToHeader(byte[] data){
+        voipPacket = ByteBuffer.allocate(data.length+2);//2 bytes n=more than paylaod
+        voipPacket.putShort(authKey);
+        voipPacket.put(data);
+        byte[] res = voipPacket.array();
+        voipPacket.clear();
+        return res;
+    }
+    public static byte[] addDHKeyToHeader(byte[] data){
+        voipPacket = ByteBuffer.allocate(data.length+2);//2 bytes n=more than paylaod
+        voipPacket.putShort((short)dhSharedKey);
+        voipPacket.put(data);
+        byte[] res = voipPacket.array();
+        voipPacket.clear();
+        return res;
+    }
+    public static void sendPackets(ArrayList<byte[]> arrL) throws IOException {
+        for (byte[] byteArr: arrL) {
+            DatagramPacket packet = new DatagramPacket(byteArr,byteArr.length, clientIP, SEND_PORT);
+            sending_socket.send(packet);
+        }
+    }
+    public static void sendData(byte[] blk) throws IOException {
+        DatagramPacket packet = new DatagramPacket(blk,blk.length, clientIP, SEND_PORT);
+
+        //Send it
+        sending_socket.send(packet);
+    }
+}
