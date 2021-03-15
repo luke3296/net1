@@ -7,21 +7,25 @@ package networks.cw1;/*
  * @author  abj
  */
 import CMPC3M06.AudioPlayer;
+import javafx.scene.chart.PieChart;
 import uk.ac.uea.cmp.voip.DatagramSocket2;
 import uk.ac.uea.cmp.voip.DatagramSocket3;
 import uk.ac.uea.cmp.voip.DatagramSocket4;
 
 import javax.sound.sampled.LineUnavailableException;
+import javax.xml.crypto.Data;
+import java.awt.dnd.DropTarget;
 import java.net.*;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Random;
 
 public class audioRecieveThread implements Runnable {
 
-    static DatagramSocket receiving_socket;
-    static AudioPlayer ap;
+    DatagramSocket receiving_socket;
+    AudioPlayer ap;
     static int PORT = 55555;
 
     static byte[] integersToBytes(int[] values) throws IOException {
@@ -63,60 +67,59 @@ public class audioRecieveThread implements Runnable {
 
 
         while (running) {
-            RecievedPacket rp = parsePacket(recieveData());
-            if (rp.authKey != AuthKey) {
+            byte[] buf = new byte[514];
+            DatagramPacket dataPacket = new DatagramPacket(buf, buf.length);
+            try {
+                receiving_socket.receive(dataPacket);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            Packet packet = Packet.ReceivePacket(dataPacket);
+            if (packet.authkey != AuthKey) {
                 //msg wernt authentic
-            }else{
-                if (interleaveCount == 16) {
-                //deinterleavce and play
-                    try {
-                        //need deinterleaving method
-                    playPackets(deinterleavePackets4x4(arr));
-                    //  playPackets(arr);
+                System.out.println("Recieved invalid packet auth key.");
+                try {
+                    ap.playBlock(new byte[]{0, 0});
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                    interleaveCount = 0;
-                    arr.clear();
             } else {
-                    arr.add(rp.res);
-                    //plays packet w/o interleaving
-//                    try {
-//                        playData(decryptData(decryptData(decryptData(rp.res, 389), 5657), 1507));
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                    }
-
-                interleaveCount++;
+                //arr.add(rp.res);
+                //plays packet w/o interleaving
+                try {
+                    ap.playBlock(decryptData(packet.data, 1680480041));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
-    }
         receiving_socket.close();
-}
-
-
-    public static void playPackets(ArrayList<byte[]> arrL) throws IOException {
-        for (byte[] byteArr: arrL) {
-           playData(decryptData(decryptData(decryptData(byteArr, 389), 5657), 1507));
-           //play w/o decrypting
-          //  playData(byteArr);
-        }
-    }
-
-    public static ArrayList<byte[]> deinterleavePackets4x4(ArrayList<byte[]> arrL){
-        HelperClass.Matrix m = new HelperClass.Matrix(arrL,4,4);
-        HelperClass.Matrix m2 = new HelperClass.Matrix(m.getPacketList(),4,4);
-       // return m.transpose().getList(); //working 4x4 deinterleaveing
-        return m.getList(); //not working interleaving
-    }
-    public static ArrayList<byte[]> deinterleavePackets12x12(ArrayList<byte[]> arrL){
-        HelperClass.Matrix m = new HelperClass.Matrix(arrL,12,12);
-        return m.transpose().getPacketList();
     }
 
 
 
-    public static byte[] recieveData(){
+//    public static void playPackets(ArrayList<byte[]> arrL) throws IOException {
+//        for (byte[] byteArr: arrL) {
+//           playData(decryptData(decryptData(decryptData(byteArr, 389), 5657), 1507));
+//           //play w/o decrypting
+//          //  playData(byteArr);
+//        }
+//    }
+//
+//    public static ArrayList<byte[]> deinterleavePackets4x4(ArrayList<byte[]> arrL){
+//        HelperClass.Matrix m = new HelperClass.Matrix(arrL,4,4);
+//        HelperClass.Matrix m2 = new HelperClass.Matrix(m.getPacketList(),4,4);
+//       // return m.transpose().getList(); //working 4x4 deinterleaveing
+//        return m.getList(); //not working interleaving
+//    }
+//    public static ArrayList<byte[]> deinterleavePackets12x12(ArrayList<byte[]> arrL){
+//        HelperClass.Matrix m = new HelperClass.Matrix(arrL,12,12);
+//        return m.transpose().getPacketList();
+//    }
+
+
+
+    public  byte[] recieveData(){
         byte[] buffer = new byte[514];
         try {
             //Receive a DatagramPacket (note that the string cant be more than 80 chars)
@@ -129,23 +132,27 @@ public class audioRecieveThread implements Runnable {
         return buffer;
     }
 
-    public static void playData(byte[] arr) throws IOException {
+    public void playData(byte[] arr) throws IOException {
         ap.playBlock(arr);
     }
-    public static byte[] decryptData(byte[] encryptedBlock, int key) throws IOException {
+    public byte[] decryptData(byte[] encryptedBlock, int key) throws IOException {
         int fourByte = 0;
         ByteBuffer cipherText = ByteBuffer.wrap(encryptedBlock);
         int[] plainIextInt = new int[128];
-        for (int i = 0; i < encryptedBlock.length/4; i++) {
+        Random random = new Random(key);
+        byte[] xorBytes = new byte[512];
+        random.nextBytes(xorBytes);
+        ByteBuffer xorKey = ByteBuffer.wrap(xorBytes);
+        for (int j = 0; j < encryptedBlock.length / 4; j++) {
             fourByte = cipherText.getInt();
-            fourByte = fourByte ^ key;
-            plainIextInt[i] = fourByte;
+            fourByte = fourByte ^ xorKey.getInt();// XOR operation with keyunwrapEncrypt.putInt(fourByte); }
+            plainIextInt[j] = fourByte;
         }
         return integersToBytes(plainIextInt);
     }
 
 
-    public static RecievedPacket parsePacket(byte[] data){
+    public RecievedPacket parsePacket(byte[] data){
         byte[] res = new byte[512];
         ByteBuffer bb = ByteBuffer.allocate(2);
         bb.order(ByteOrder.BIG_ENDIAN);
@@ -158,7 +165,7 @@ public class audioRecieveThread implements Runnable {
         return rp;
     }
 
-    static class RecievedPacket{
+    class RecievedPacket{
         byte[] res;
         short authKey;
         public RecievedPacket(byte[] res, short authKey){

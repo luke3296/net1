@@ -16,8 +16,9 @@ package networks.cw1;    /*
     import java.io.*;
     import java.nio.ByteBuffer;
     import java.util.ArrayList;
+    import java.util.Random;
 
-    public class audioSendThread implements Runnable{
+public class audioSendThread implements Runnable {
 
         // from Prabhu R on SO here -> https://stackoverflow.com/questions/1086054/how-to-convert-int-to-byte/1086071#1086071
         static byte[] integersToBytes(int[] values) throws IOException {
@@ -32,20 +33,19 @@ package networks.cw1;    /*
 
 
         // static int key = 57; // if the key is 512 the audio is uneffected the audio is still understandble but there noticble noise
-        static DatagramSocket sending_socket;
-        static InetAddress clientIP = null;
+        private DatagramSocket sending_socket;
+        private InetAddress clientIP = null;
         static int PORT = 55555;
-        static AudioRecorder ar;
+        private AudioRecorder ar;
         static short authKey = 38;
-        static  ByteBuffer voipPacket;
-        static ArrayList<byte[]> packets = new ArrayList<byte[]>();
+        private  ByteBuffer voipPacket;
+        private ArrayList<byte[]> packets = new ArrayList<byte[]>();
         public void start(){
             Thread thread = new Thread(this);
             thread.start();
         }
 
         public void run (){
-
             try {
                 ar = new AudioRecorder();
             } catch (LineUnavailableException e) {
@@ -54,7 +54,7 @@ package networks.cw1;    /*
             int interleaveCount=0;
             while (true) {
                 try {
-                    sending_socket = new DatagramSocket();
+                    sending_socket = new DatagramSocket4();
                 } catch (SocketException e) {
                     System.out.println("ERROR: TextSender: Could not open UDP socket to send from.");
                     e.printStackTrace();
@@ -71,7 +71,7 @@ package networks.cw1;    /*
 
                 byte[] data = new byte[512];
                 try {
-                    data = getData();
+                    data = ar.getBlock();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -81,29 +81,27 @@ package networks.cw1;    /*
                 }
                 try {
                     // sendData(addHeader(encryptData(encryptData(encryptData(data, 1507), 5657), 389))); // this is with three rounds yet still understanble
-                    if (interleaveCount == 16) {
-                        sendPackets(interleavePackets4x4(packets));
-                        //    System.out.println("sending " + packets.size() + " packets");
-                        packets.clear();
-                        interleaveCount = 0;
-                    } else {
-                        packets.add(addHeader(encryptData(encryptData(encryptData(data, 1507), 5657), 389)));
-                        interleaveCount++;
-                    }
+                    Packet packet = new Packet(authKey, encryptData(data, 1680480041));
+                    DatagramPacket packet1 = new DatagramPacket(new byte[1], 1, clientIP, PORT);
+                    packet.SendPacket(packet1);
+                    sending_socket.send(packet1);
+
+//
+//                    if (interleaveCount == 16) {
+//                        sendPackets(interleavePackets4x4(packets));
+//                        //    System.out.println("sending " + packets.size() + " packets");
+//                        packets.clear();
+//                        interleaveCount = 0;
+//                    } else {
+//                        packets.add(addHeader(encryptData(encryptData(encryptData(data, 1507), 5657), 389)));
+//                        interleaveCount++;
+//                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }
 
-        public static void sendPackets(ArrayList<byte[]> arrL) throws IOException {
-            for (byte[] byteArr: arrL) {
-                DatagramPacket packet = new DatagramPacket(byteArr,byteArr.length, clientIP, PORT);
-
-                //Send it
-                sending_socket.send(packet);
-            }
-        }
         /*
          * interlaeve function
          *
@@ -117,26 +115,26 @@ package networks.cw1;    /*
          * packet 4 position 3 i=3 j= 0 index = 0*4 +3 = 3
          * packet 10 position 9 i =1 j=2  index = 2*4 +1 = 9
          * */
-        public static ArrayList<byte[]> interleavePackets4x4(ArrayList<byte[]> arrL){
-            HelperClass.Matrix m = new HelperClass.Matrix(arrL,4,4);
-           // m.printMatrix();
-            return m.getList();
-        }
-        public static ArrayList<byte[]> interleavePackets12x12(ArrayList<byte[]> arrL){
-            HelperClass.Matrix m = new HelperClass.Matrix(arrL,12,12);
-            return m.transpose().getPacketList();
-        }
+//        public static ArrayList<byte[]> interleavePackets4x4(ArrayList<byte[]> arrL){
+//            HelperClass.Matrix m = new HelperClass.Matrix(arrL,4,4);
+//           // m.printMatrix();
+//            return m.getList();
+//        }
+//        public static ArrayList<byte[]> interleavePackets12x12(ArrayList<byte[]> arrL){
+//            HelperClass.Matrix m = new HelperClass.Matrix(arrL,12,12);
+//            return m.transpose().getPacketList();
+//        }
 
-        public static void sendData(byte[] blk) throws IOException {
+        public void sendData(byte[] blk) throws IOException {
             DatagramPacket packet = new DatagramPacket(blk,blk.length, clientIP, PORT);
 
             //Send it
             sending_socket.send(packet);
         }
-        public static byte[] getData() throws IOException {
+        public byte[] getData() throws IOException {
             return ar.getBlock();
         }
-        public static byte[] addHeader(byte[] data){
+        public byte[] addHeader(byte[] data){
             voipPacket = ByteBuffer.allocate(514);//2 bytes n=more than paylaod
             voipPacket.putShort(authKey);
             voipPacket.put(data);
@@ -144,18 +142,22 @@ package networks.cw1;    /*
 
         }
 
-        public static void closeResources(){
+        public void closeResources(){
             ar.close();
             sending_socket.close();
         }
-        public static byte[] encryptData(byte[] arr, int key) throws IOException {
+        public byte[] encryptData(byte[] arr, int key) throws IOException {
             byte[] res = new byte[512];
             int[] intRes = new int[128];
             int fourByte =0;
             ByteBuffer plainText = ByteBuffer.wrap(arr);
+            Random random = new Random(key);
+            byte[] xorBytes = new byte[512];
+            random.nextBytes(xorBytes);
+            ByteBuffer xorKey = ByteBuffer.wrap(xorBytes);
             for (int j = 0; j < arr.length / 4; j++) {
                 fourByte = plainText.getInt();
-                fourByte = fourByte ^ key;// XOR operation with keyunwrapEncrypt.putInt(fourByte); }
+                fourByte = fourByte ^ xorKey.getInt();// XOR operation with keyunwrapEncrypt.putInt(fourByte); }
                 intRes[j] = fourByte;
             }
             return integersToBytes(intRes);
