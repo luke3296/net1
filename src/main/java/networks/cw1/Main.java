@@ -1,5 +1,7 @@
 package networks.cw1;
 
+import java.util.Scanner;
+
 public class Main {
     /*
 Project : A VoIP stack in Java
@@ -41,8 +43,17 @@ Peer processes :
 
  */
     public static void main(String[] args) {
-        audioSendThread sender = new audioSendThread();
-        audioRecieveThread recieve = new audioRecieveThread();
+        int interleave = 0;
+        if(args.length > 1) {
+            System.out.println("Too many arguments passed.");
+            return;
+        }
+        if(args.length == 1)
+            interleave = Integer.parseInt(args[0]);
+
+
+        AudioSendThread sender = new AudioSendThread(interleave);
+        AudioRecieveThread recieve = new AudioRecieveThread(interleave);
         recieve.start();
         sender.start();
     }

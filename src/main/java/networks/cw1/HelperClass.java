@@ -2,10 +2,13 @@ package networks.cw1;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 
 public class HelperClass {
     static class RecievedPacket{
@@ -47,8 +50,8 @@ public class HelperClass {
         }
         return baos.toByteArray();
     }
-    public static ArrayList<byte[]> interleavePackets4x4(ArrayList<byte[]> arrL) {
-        ArrayList<byte[]> res = new ArrayList<byte[]>();
+    public static ArrayList<VoipPacket> interleavePackets4x4(ArrayList<VoipPacket> arrL) {
+        ArrayList<VoipPacket> res = new ArrayList<>();
         res.add(arrL.get(0)); //0
         res.add(arrL.get(4)); //1
         res.add(arrL.get(8)); //2
@@ -99,7 +102,7 @@ public class HelperClass {
         return res;
     }
 
-    public static ArrayList<byte[]> interleavePackets8x8(ArrayList<byte[]> arrL){
+    public static ArrayList<VoipPacket> interleavePackets8x8(ArrayList<VoipPacket> arrL){
   /*    1	9	17	25	33	41	49	57
 
         2	10	18	26	34	42	50	58
@@ -115,7 +118,7 @@ public class HelperClass {
         7	15	23	31	39	47	55	63
 
         8	16	24	32	40	48	56	64    copy numbers in order left to right, up to down*/
-        ArrayList<byte[]> res = new ArrayList<byte[]>();
+        ArrayList<VoipPacket> res = new ArrayList<>();
 
         res.add(arrL.get(0	));
         res.add(arrL.get(8  ));
@@ -269,28 +272,31 @@ public class HelperClass {
 
         return res;
     }
-    public static byte[] encryptData(byte[] arr, int key) throws IOException {
+    public static byte[] encryptData(byte[] arr, BigInteger key) throws IOException {
         byte[] res = new byte[512];
-        int[] intRes = new int[128];
-        int fourByte =0;
+        SecureRandom random = new SecureRandom(key.toByteArray());
+        byte[] randomParams = new byte[512];
+        random.nextBytes(randomParams);
         ByteBuffer plainText = ByteBuffer.wrap(arr);
-        for (int j = 0; j < arr.length / 4; j++) {
-            fourByte = plainText.getInt();
-            fourByte = fourByte ^ key;// XOR operation with keyunwrapEncrypt.putInt(fourByte); }
-            intRes[j] = fourByte;
+        for (int j = 0; j < arr.length; j++) {
+            byte val = plainText.get();
+            val = (byte) (val ^ randomParams[j]); // XOR operation with keyunwrapEncrypt.putInt(fourByte); }
+            res[j] = val;
         }
-        return integersToBytes(intRes);
+        return res;
     }
-    public static byte[] decryptData(byte[] encryptedBlock, int key) throws IOException {
-        int fourByte = 0;
-        ByteBuffer cipherText = ByteBuffer.wrap(encryptedBlock);
-        int[] plainIextInt = new int[128];
-        for (int i = 0; i < encryptedBlock.length/4; i++) {
-            fourByte = cipherText.getInt();
-            fourByte = fourByte ^ key;
-            plainIextInt[i] = fourByte;
+    public static byte[] decryptData(byte[] arr, BigInteger key) throws IOException {
+        byte[] res = new byte[512];
+        SecureRandom random = new SecureRandom(key.toByteArray());
+        byte[] randomParams = new byte[512];
+        random.nextBytes(randomParams);
+        ByteBuffer plainText = ByteBuffer.wrap(arr);
+        for (int j = 0; j < arr.length; j++) {
+            byte val = plainText.get();
+            val = (byte) (val ^ randomParams[j]); // XOR operation with keyunwrapEncrypt.putInt(fourByte); }
+            res[j] = val;
         }
-        return integersToBytes(plainIextInt);
+        return res;
     }
 //testing the interleavers
     public static void main(String[] args) {
