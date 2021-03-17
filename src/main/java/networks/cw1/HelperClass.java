@@ -52,26 +52,34 @@ public class HelperClass {
     }
     public static ArrayList<VoipPacket> interleavePackets4x4(ArrayList<VoipPacket> arrL) {
         ArrayList<VoipPacket> res = new ArrayList<>();
-        res.add(arrL.get(0)); //0
-        res.add(arrL.get(4)); //1
-        res.add(arrL.get(8)); //2
-        res.add(arrL.get(12)); //3
+        res.ensureCapacity(4 * 4);
 
-        res.add(arrL.get(1)); //4
-        res.add(arrL.get(5));
-        res.add(arrL.get(9));
-        res.add(arrL.get(13));
+        for(int x = 0; x < 4; x++) {
+            for(int y = 0; y < 4; y++) {
+                res.add(x * 4 + y ,arrL.get(y * 4 + x));
+            }
+        }
 
-        res.add(arrL.get(2));
-        res.add(arrL.get(6));
-        res.add(arrL.get(10));
-        res.add(arrL.get(14));
-
-
-        res.add(arrL.get(3));
-        res.add(arrL.get(7));
-        res.add(arrL.get(11));
-        res.add(arrL.get(15));
+//        res.add(arrL.get(0)); //0
+//        res.add(arrL.get(4)); //1
+//        res.add(arrL.get(8)); //2
+//        res.add(arrL.get(12)); //3
+//
+//        res.add(arrL.get(1)); //4
+//        res.add(arrL.get(5));
+//        res.add(arrL.get(9));
+//        res.add(arrL.get(13));
+//
+//        res.add(arrL.get(2));
+//        res.add(arrL.get(6));
+//        res.add(arrL.get(10));
+//        res.add(arrL.get(14));
+//
+//
+//        res.add(arrL.get(3));
+//        res.add(arrL.get(7));
+//        res.add(arrL.get(11));
+//        res.add(arrL.get(15));
 
         return res;
     }
@@ -119,71 +127,78 @@ public class HelperClass {
 
         8	16	24	32	40	48	56	64    copy numbers in order left to right, up to down*/
         ArrayList<VoipPacket> res = new ArrayList<>();
+        res.ensureCapacity(8 * 8);
 
-        res.add(arrL.get(0	));
-        res.add(arrL.get(8  ));
-        res.add(arrL.get(16 ));
-        res.add(arrL.get(24 ));
-        res.add(arrL.get(32 ));
-        res.add(arrL.get(40 ));
-        res.add(arrL.get(48 ));
-        res.add(arrL.get(56 ));
-        res.add(arrL.get(1  ));
-        res.add(arrL.get(9 ));
-        res.add(arrL.get(17 ));
-        res.add(arrL.get(25 ));
-        res.add(arrL.get(33 ));
-        res.add(arrL.get(41 ));
-        res.add(arrL.get(49 ));
-        res.add(arrL.get(57 ));
-        res.add(arrL.get(2  ));
-        res.add(arrL.get(10 ));
-        res.add(arrL.get(18 ));
-        res.add(arrL.get(26 ));
-        res.add(arrL.get(34 ));
-        res.add(arrL.get(42 ));
-        res.add(arrL.get(50 ));
-        res.add(arrL.get(58 ));
-        res.add(arrL.get(3  ));
-        res.add(arrL.get(11 ));
-        res.add(arrL.get(19 ));
-        res.add(arrL.get(27 ));
-        res.add(arrL.get(35 ));
-        res.add(arrL.get(43 ));
-        res.add(arrL.get(51 ));
-        res.add(arrL.get(59 ));
-        res.add(arrL.get(4  ));
-        res.add(arrL.get(12 ));
-        res.add(arrL.get(20 ));
-        res.add(arrL.get(28 ));
-        res.add(arrL.get(36 ));
-        res.add(arrL.get(44 ));
-        res.add(arrL.get(52 ));
-        res.add(arrL.get(60 ));
-        res.add(arrL.get(5 ));
-        res.add(arrL.get(13 ));
-        res.add(arrL.get(21 ));
-        res.add(arrL.get(29 ));
-        res.add(arrL.get(37 ));
-        res.add(arrL.get(45 ));
-        res.add(arrL.get(53 ));
-        res.add(arrL.get(61 ));
-        res.add(arrL.get(6  ));
-        res.add(arrL.get(14 ));
-        res.add(arrL.get(22 ));
-        res.add(arrL.get(30 ));
-        res.add(arrL.get(38 ));
-        res.add(arrL.get(46 ));
-        res.add(arrL.get(54 ));
-        res.add(arrL.get(62 ));
-        res.add(arrL.get(7  ));
-        res.add(arrL.get(15 ));
-        res.add(arrL.get(23 ));
-        res.add(arrL.get(31 ));
-        res.add(arrL.get(39 ));
-        res.add(arrL.get(47 ));
-        res.add(arrL.get(55 ));
-        res.add(arrL.get(63 ));
+        for(int x = 0; x < 8; x++) {
+            for(int y = 0; y < 8; y++) {
+                res.add(x * 8 + y ,arrL.get(y * 8 + x));
+            }
+        }
+
+//        res.add(arrL.get(0	));
+//        res.add(arrL.get(8  ));
+//        res.add(arrL.get(16 ));
+//        res.add(arrL.get(24 ));
+//        res.add(arrL.get(32 ));
+//        res.add(arrL.get(40 ));
+//        res.add(arrL.get(48 ));
+//        res.add(arrL.get(56 ));
+//        res.add(arrL.get(1  ));
+//        res.add(arrL.get(9 ));
+//        res.add(arrL.get(17 ));
+//        res.add(arrL.get(25 ));
+//        res.add(arrL.get(33 ));
+//        res.add(arrL.get(41 ));
+//        res.add(arrL.get(49 ));
+//        res.add(arrL.get(57 ));
+//        res.add(arrL.get(2  ));
+//        res.add(arrL.get(10 ));
+//        res.add(arrL.get(18 ));
+//        res.add(arrL.get(26 ));
+//        res.add(arrL.get(34 ));
+//        res.add(arrL.get(42 ));
+//        res.add(arrL.get(50 ));
+//        res.add(arrL.get(58 ));
+//        res.add(arrL.get(3  ));
+//        res.add(arrL.get(11 ));
+//        res.add(arrL.get(19 ));
+//        res.add(arrL.get(27 ));
+//        res.add(arrL.get(35 ));
+//        res.add(arrL.get(43 ));
+//        res.add(arrL.get(51 ));
+//        res.add(arrL.get(59 ));
+//        res.add(arrL.get(4  ));
+//        res.add(arrL.get(12 ));
+//        res.add(arrL.get(20 ));
+//        res.add(arrL.get(28 ));
+//        res.add(arrL.get(36 ));
+//        res.add(arrL.get(44 ));
+//        res.add(arrL.get(52 ));
+//        res.add(arrL.get(60 ));
+//        res.add(arrL.get(5 ));
+//        res.add(arrL.get(13 ));
+//        res.add(arrL.get(21 ));
+//        res.add(arrL.get(29 ));
+//        res.add(arrL.get(37 ));
+//        res.add(arrL.get(45 ));
+//        res.add(arrL.get(53 ));
+//        res.add(arrL.get(61 ));
+//        res.add(arrL.get(6  ));
+//        res.add(arrL.get(14 ));
+//        res.add(arrL.get(22 ));
+//        res.add(arrL.get(30 ));
+//        res.add(arrL.get(38 ));
+//        res.add(arrL.get(46 ));
+//        res.add(arrL.get(54 ));
+//        res.add(arrL.get(62 ));
+//        res.add(arrL.get(7  ));
+//        res.add(arrL.get(15 ));
+//        res.add(arrL.get(23 ));
+//        res.add(arrL.get(31 ));
+//        res.add(arrL.get(39 ));
+//        res.add(arrL.get(47 ));
+//        res.add(arrL.get(55 ));
+//        res.add(arrL.get(63 ));
 
         return res;
     }

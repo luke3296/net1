@@ -1,5 +1,7 @@
 package networks.cw1;    
 import CMPC3M06.AudioRecorder;
+import uk.ac.uea.cmp.voip.DatagramSocket2;
+import uk.ac.uea.cmp.voip.DatagramSocket3;
 //import uk.ac.uea.cmp.voip.DatagramSocket;
 
 import javax.sound.sampled.LineUnavailableException;
@@ -62,13 +64,13 @@ public class AudioSendThread implements Runnable {
         }
         //initlaize the sending socket, will send data from random ports
         try {
-            sending_socket = new DatagramSocket();
+            sending_socket = new DatagramSocket3();
         } catch (SocketException e) {
             e.printStackTrace();
         }
         //initlaize the recieveing socket, will listen on port provided
         try {
-            receiving_socket = new DatagramSocket(RECEIVE_PORT);
+            receiving_socket = new DatagramSocket2(RECEIVE_PORT);
         } catch (SocketException e) {
             e.printStackTrace();
         }

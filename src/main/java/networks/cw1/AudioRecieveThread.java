@@ -40,6 +40,8 @@ public class AudioRecieveThread implements Runnable{
     int interleaveCount = 0; // count the packets sent
     int interleaveCase = 0; // 0 = no interleaving,  1= 4x4 interleaving, 2 = 8x8
 
+    int counter = 0;
+
     //now redundent using tcp for key exhange
     static boolean waitForKey = true;
     static  boolean waitForConfirm = true;
@@ -138,11 +140,12 @@ public class AudioRecieveThread implements Runnable{
             e.printStackTrace();
         }
         pw.close();
-
+        VoipPacket lastPacket = VoipPacket.EMPTY;
         //main loop
         while(true) {
-            ByteBuffer buff = ByteBuffer.wrap(recieveData(514));
+            ByteBuffer buff = ByteBuffer.wrap(recieveData(522));
             VoipPacket packet = VoipPacket.from(buff);
+            counter++;
             if (packet.authKey != authKey) {
                 System.out.println("Auth err");
                 continue;
@@ -152,7 +155,8 @@ public class AudioRecieveThread implements Runnable{
                     case 0:
                         //389), 5657), 1507
                         //  byte[] data = Arrays.copyOfRange(rp.res, 4, 516);
-                        ap.playBlock(HelperClass.decryptData(packet.data, dhSharedKey));
+                        if(packet.checkData(counter))
+                            ap.playBlock(HelperClass.decryptData(packet.data, dhSharedKey));
                         //ap.playBlock(packet.data);
                         break;
                     case 1:
@@ -198,6 +202,8 @@ public class AudioRecieveThread implements Runnable{
                 e.printStackTrace();
                 break;
             }
+            if(packet.checkData(counter))
+                lastPacket = packet;
         }
 //        while(true){
 //            HelperClass.RecievedPacket rp = HelperClass.parsePacket(recieveData(20));
@@ -225,8 +231,11 @@ public class AudioRecieveThread implements Runnable{
     }
 
     public void playPackets(ArrayList<VoipPacket> arrL) throws IOException {
+        int packet = arrL.get(0).pktNum;
         for (VoipPacket voipPacket: arrL) {
-            ap.playBlock(HelperClass.decryptData(voipPacket.data, dhSharedKey));
+            if(voipPacket.checkData(0) ) //packet == voipPacket.pktNum)
+                ap.playBlock(HelperClass.decryptData(voipPacket.data, dhSharedKey));
+            packet++;
         }
 
     }
