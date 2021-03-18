@@ -1,0 +1,33 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group 'networks.cw1'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    flatDir {
+        dirs 'libs'
+    }
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    compile name: 'voip'
+    compile name: 'AudioLib'
+
+}
+
+application {
+    mainClass = 'networks.cw1.Main'
+}
+
+
+
+test {
+    useJUnitPlatform()
+}
