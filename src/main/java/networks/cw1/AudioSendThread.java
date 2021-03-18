@@ -64,7 +64,7 @@ public class AudioSendThread implements Runnable {
         }
         //initlaize the sending socket, will send data from random ports
         try {
-            sending_socket = new DatagramSocket3();
+            sending_socket = new DatagramSocket();
         } catch (SocketException e) {
             e.printStackTrace();
         }
